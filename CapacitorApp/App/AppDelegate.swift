@@ -298,7 +298,7 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                       const composer = top && hasComposer && !!input && !input.disabled && !hasAttachments && !isStudio && location.pathname === '/';
                       const modelButton = document.querySelector('.mobile-header-model-button button');
                       const label = modelButton?.getAttribute('aria-label') || 'Aura Link';
-                      const model = label.replace(/^Selecionar modelo\. Atual:\s*/i, '') || 'Aura Link';
+                      const model = label.replace(/^Selecionar modelo\\. Atual:\\s*/i, '') || 'Aura Link';
                       root.classList.toggle('native-swiftui-glass-active', top);
                       root.classList.toggle('native-swiftui-composer-active', composer);
                       window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, composer, model });
