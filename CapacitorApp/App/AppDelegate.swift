@@ -32,7 +32,6 @@ private func loadAuraNativeLogo() -> UIImage? {
 
 private struct AuraNativeLeadingControls: View {
     @ObservedObject var state: AuraNativeGlassState
-    @Namespace private var leadingGlass
 
     private var menuButton: some View {
         Button { state.perform("menu") } label: {
@@ -65,29 +64,27 @@ private struct AuraNativeLeadingControls: View {
 
     @available(iOS 26.0, *)
     private var liquidGlassControls: some View {
-        GlassEffectContainer(spacing: 0) {
-            HStack(spacing: 0) {
-                menuButton
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .glassEffectUnion(id: "aura-leading-controls", namespace: leadingGlass)
-                modelButton
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .glassEffectUnion(id: "aura-leading-controls", namespace: leadingGlass)
-            }
+        HStack(spacing: 0) {
+            menuButton
+                .buttonStyle(.plain)
+            modelButton
+                .buttonStyle(.plain)
         }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .glassEffect(.regular.interactive(), in: Capsule())
     }
 
     private var compatibilityControls: some View {
         HStack(spacing: 0) {
             menuButton
                 .buttonStyle(.plain)
-                .background(.ultraThinMaterial, in: Circle())
             modelButton
                 .buttonStyle(.plain)
-                .background(.ultraThinMaterial, in: Circle())
         }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 3)
+        .background(.ultraThinMaterial, in: Capsule())
     }
 
     @ViewBuilder
