@@ -392,7 +392,13 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                     clearTimeout(timer);
                     timer = setTimeout(() => {
                       const root = document.documentElement;
-                      const sidebarOpen = !!document.querySelector('.mobile-drawer-main.is-partitioned');
+                      const drawer = document.querySelector('.mobile-drawer-main');
+                      const drawerRoot = document.querySelector('.mobile-drawer-root');
+                      const drawerProgress = Number.parseFloat(
+                        getComputedStyle(drawerRoot || document.documentElement)
+                          .getPropertyValue('--mobile-drawer-progress') || '0'
+                      );
+                      const sidebarOpen = !!drawer?.classList.contains('is-partitioned') || drawerProgress > 2;
                       const dialogOpen = !!document.querySelector('[role="dialog"][data-state="open"]');
                       const hasHeader = !!document.querySelector('.mobile-header-shell');
                       const form = document.querySelector('form');
