@@ -8,7 +8,7 @@
 	"ios": {
 		"preferredContentMode": "mobile",
 		"backgroundColor": "#050509",
-		"contentInset": "always"
+		"contentInset": "never"
 	},
 	"plugins": {
 		"Keyboard": {

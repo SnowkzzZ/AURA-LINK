@@ -3,7 +3,6 @@ import Capacitor
 import AVFoundation
 import Photos
 import WebKit
-import SwiftUI
 
 final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHandler, AVAudioPlayerDelegate, AVSpeechSynthesizerDelegate {
     private let permissionsBridgeName = "auraPermissions"
@@ -13,7 +12,6 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     private let nativeSpeechSynthesizer = AVSpeechSynthesizer()
     private var nativeAudioRequestId: String?
     private var nativeSpeechRequestId: String?
-    private var nativeHeaderController: NativeGlassHeaderController?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,11 +21,6 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         configureNativeKeyboard()
-    }
-
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        layoutNativeHeader()
     }
 
     private func configureNativeKeyboard() {
@@ -47,41 +40,6 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
             nativeSpeechSynthesizer.delegate = self
             permissionsBridgeInstalled = true
         }
-        installNativeHeaderIfNeeded()
-    }
-
-    private func installNativeHeaderIfNeeded() {
-        guard nativeHeaderController == nil else {
-            layoutNativeHeader()
-            return
-        }
-
-        let controller = NativeGlassHeaderController(
-            onMenu: { [weak self] in
-                self?.triggerWebEvent("aura-native-open-sidebar")
-                UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.76)
-            },
-            onNewChat: { [weak self] in
-                self?.triggerWebEvent("aura-native-new-chat")
-                UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.76)
-            }
-        )
-        addChild(controller)
-        view.addSubview(controller.view)
-        controller.didMove(toParent: self)
-        nativeHeaderController = controller
-        layoutNativeHeader()
-    }
-
-    private func layoutNativeHeader() {
-        guard let header = nativeHeaderController?.view else { return }
-        header.frame = CGRect(x: 0, y: view.safeAreaInsets.top, width: view.bounds.width, height: 72)
-        view.bringSubviewToFront(header)
-    }
-
-    private func triggerWebEvent(_ name: String) {
-        guard let webView else { return }
-        webView.evaluateJavaScript("window.dispatchEvent(new CustomEvent('\(name)'));", completionHandler: nil)
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
