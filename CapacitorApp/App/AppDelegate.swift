@@ -7,7 +7,9 @@ import WebKit
 final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHandler, AVAudioPlayerDelegate, AVSpeechSynthesizerDelegate {
     private let permissionsBridgeName = "auraPermissions"
     private let audioBridgeName = "auraAudio"
+    private let themeBridgeName = "auraTheme"
     private var permissionsBridgeInstalled = false
+    private var usesDarkStatusBar = false
     private var nativeAudioPlayer: AVAudioPlayer?
     private let nativeSpeechSynthesizer = AVSpeechSynthesizer()
     private var nativeAudioRequestId: String?
@@ -37,12 +39,36 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
         if !permissionsBridgeInstalled {
             webView.configuration.userContentController.add(self, name: permissionsBridgeName)
             webView.configuration.userContentController.add(self, name: audioBridgeName)
+            webView.configuration.userContentController.add(self, name: themeBridgeName)
+            let themeScript = WKUserScript(
+                source: """
+                (() => {
+                  const publishAuraTheme = () => {
+                    const dark = document.documentElement.classList.contains('dark');
+                    window.webkit?.messageHandlers?.auraTheme?.postMessage(dark ? 'dark' : 'light');
+                  };
+                  new MutationObserver(publishAuraTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+                  publishAuraTheme();
+                })();
+                """,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true
+            )
+            webView.configuration.userContentController.addUserScript(themeScript)
             nativeSpeechSynthesizer.delegate = self
             permissionsBridgeInstalled = true
         }
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        if message.name == themeBridgeName, let theme = message.body as? String {
+            usesDarkStatusBar = theme == "dark"
+            view.backgroundColor = usesDarkStatusBar ? UIColor.black : UIColor(red: 0.984, green: 0.980, blue: 0.969, alpha: 1)
+            webView?.isOpaque = false
+            setNeedsStatusBarAppearanceUpdate()
+            return
+        }
+
         guard let payload = message.body as? [String: Any] else { return }
 
         if message.name == audioBridgeName {
@@ -209,7 +235,7 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        traitCollection.userInterfaceStyle == .dark ? .lightContent : .darkContent
+        usesDarkStatusBar ? .lightContent : .darkContent
     }
 
     override var prefersStatusBarHidden: Bool { false }
