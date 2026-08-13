@@ -19,27 +19,6 @@ private final class AuraNativeGlassState: ObservableObject {
     }
 }
 
-private struct AuraSystemGlass<ShapeType: Shape>: ViewModifier {
-    let shape: ShapeType
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.interactive(), in: shape)
-        } else {
-            content
-                .background(.ultraThinMaterial, in: shape)
-                .overlay(shape.stroke(.white.opacity(0.16), lineWidth: 0.7))
-        }
-    }
-}
-
-private extension View {
-    func auraSystemGlass<S: Shape>(_ shape: S) -> some View {
-        modifier(AuraSystemGlass(shape: shape))
-    }
-}
-
 private func loadAuraNativeLogo() -> UIImage? {
     let candidates = [
         Bundle.main.path(forResource: "aura-logo-static", ofType: "png", inDirectory: "public"),
@@ -54,56 +33,95 @@ private func loadAuraNativeLogo() -> UIImage? {
 private struct AuraNativeLeadingControls: View {
     @ObservedObject var state: AuraNativeGlassState
 
-    var body: some View {
-        HStack(spacing: 0) {
-            Button { state.perform("menu") } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 19, weight: .semibold))
-                    .frame(width: 41, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Abrir menu")
-
-            Button { state.perform("model") } label: {
-                Group {
-                    if let logo = loadAuraNativeLogo() {
-                        Image(uiImage: logo)
-                            .resizable()
-                            .scaledToFit()
-                    } else {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.blue)
-                    }
-                }
-                .frame(width: 33, height: 33)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Selecionar modelo. Atual: \(state.modelName)")
+    private var menuButton: some View {
+        Button { state.perform("menu") } label: {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 18, weight: .semibold))
+                .frame(width: 46, height: 46)
         }
         .foregroundStyle(state.isDark ? Color.white : Color.black)
-        .padding(.horizontal, 4)
-        .frame(width: 90, height: 52)
-        .auraSystemGlass(Capsule())
-        .animation(.easeOut(duration: 0.2), value: state.isDark)
+        .accessibilityLabel("Abrir menu")
+    }
+
+    private var modelButton: some View {
+        Button { state.perform("model") } label: {
+            Group {
+                if let logo = loadAuraNativeLogo() {
+                    Image(uiImage: logo)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+            .frame(width: 34, height: 34)
+            .frame(width: 46, height: 46)
+        }
+        .accessibilityLabel("Selecionar modelo. Atual: \(state.modelName)")
+    }
+
+    @available(iOS 26.0, *)
+    private var liquidGlassControls: some View {
+        GlassEffectContainer(spacing: 6) {
+            HStack(spacing: 6) {
+                menuButton
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                modelButton
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+            }
+        }
+    }
+
+    private var compatibilityControls: some View {
+        HStack(spacing: 6) {
+            menuButton
+                .buttonStyle(.plain)
+                .background(.ultraThinMaterial, in: Circle())
+            modelButton
+                .buttonStyle(.plain)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+    }
+
+    @ViewBuilder
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            liquidGlassControls
+        } else {
+            compatibilityControls
+        }
     }
 }
 
 private struct AuraNativeNewChatControl: View {
     @ObservedObject var state: AuraNativeGlassState
 
-    var body: some View {
+    private var newChatButton: some View {
         Button { state.perform("newChat") } label: {
             Image(systemName: "square.and.pencil")
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 52, height: 52)
+                .font(.system(size: 19, weight: .semibold))
+                .frame(width: 48, height: 48)
                 .contentShape(Circle())
         }
-        .buttonStyle(.plain)
         .foregroundStyle(state.isDark ? Color.white : Color.black)
-        .auraSystemGlass(Circle())
         .accessibilityLabel("Novo chat")
-        .animation(.easeOut(duration: 0.2), value: state.isDark)
+    }
+
+    @ViewBuilder
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            newChatButton
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+        } else {
+            newChatButton
+                .buttonStyle(.plain)
+                .background(.ultraThinMaterial, in: Circle())
+        }
     }
 }
 
@@ -232,7 +250,6 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     private let nativeGlassState = AuraNativeGlassState()
     private var nativeLeadingHost: UIHostingController<AuraNativeLeadingControls>?
     private var nativeNewChatHost: UIHostingController<AuraNativeNewChatControl>?
-    private var nativeComposerHost: UIHostingController<AuraNativeComposer>?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -295,13 +312,11 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                       const hasAttachments = !!form?.querySelector('button[aria-label^="Remover "]');
                       const isStudio = !!document.querySelector('.aura-studio-shell, .aura-studio-active-shell');
                       const top = hasHeader && !sidebarOpen && !dialogOpen;
-                      const composer = top && hasComposer && !!input && !input.disabled && !hasAttachments && !isStudio && location.pathname === '/';
                       const modelButton = document.querySelector('.mobile-header-model-button button');
                       const label = modelButton?.getAttribute('aria-label') || 'Aura Link';
                       const model = label.replace(/^Selecionar modelo\\. Atual:\\s*/i, '') || 'Aura Link';
                       root.classList.toggle('native-swiftui-glass-active', top);
-                      root.classList.toggle('native-swiftui-composer-active', composer);
-                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, composer, model });
+                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, model });
                     }, 40);
                   };
                   const observer = new MutationObserver(publish);
@@ -338,11 +353,9 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
            let payload = message.body as? [String: Any],
            payload["type"] as? String == "state" {
             let top = payload["top"] as? Bool ?? false
-            let composer = payload["composer"] as? Bool ?? false
             nativeGlassState.modelName = payload["model"] as? String ?? "Aura Link"
             nativeLeadingHost?.view.isHidden = !top
             nativeNewChatHost?.view.isHidden = !top
-            nativeComposerHost?.view.isHidden = !composer
             return
         }
 
@@ -380,9 +393,8 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
 
         let leading = UIHostingController(rootView: AuraNativeLeadingControls(state: nativeGlassState))
         let newChat = UIHostingController(rootView: AuraNativeNewChatControl(state: nativeGlassState))
-        let composer = UIHostingController(rootView: AuraNativeComposer(state: nativeGlassState))
 
-        [leading, newChat, composer].forEach { host in
+        [leading, newChat].forEach { host in
             host.view.backgroundColor = .clear
             host.view.translatesAutoresizingMaskIntoConstraints = false
             host.view.isHidden = true
@@ -391,28 +403,20 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
             host.didMove(toParent: self)
         }
 
-        let keyboardTop = view.keyboardLayoutGuide.topAnchor
         NSLayoutConstraint.activate([
             leading.view.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
             leading.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            leading.view.widthAnchor.constraint(equalToConstant: 90),
+            leading.view.widthAnchor.constraint(equalToConstant: 104),
             leading.view.heightAnchor.constraint(equalToConstant: 52),
 
             newChat.view.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
             newChat.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             newChat.view.widthAnchor.constraint(equalToConstant: 52),
-            newChat.view.heightAnchor.constraint(equalToConstant: 52),
-
-            composer.view.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            composer.view.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            composer.view.bottomAnchor.constraint(equalTo: keyboardTop, constant: -12),
-            composer.view.heightAnchor.constraint(greaterThanOrEqualToConstant: 96),
-            composer.view.heightAnchor.constraint(lessThanOrEqualToConstant: 148)
+            newChat.view.heightAnchor.constraint(equalToConstant: 52)
         ])
 
         nativeLeadingHost = leading
         nativeNewChatHost = newChat
-        nativeComposerHost = composer
     }
 
     private func performNativeUIAction(_ action: String, text: String?) {
