@@ -12,10 +12,6 @@ settings:
     CODE_SIGN_STYLE: Automatic
     CURRENT_PROJECT_VERSION: 1
     MARKETING_VERSION: 1.0
-packages:
-  Supabase:
-    url: https://github.com/supabase/supabase-swift.git
-    exactVersion: 2.48.0
 targets:
   AuraLinkNative:
     type: application
@@ -24,13 +20,9 @@ targets:
       - path: AuraLinkNative/AuraLinkNativeApp.swift
       - path: AuraLinkNative/Core
       - path: AuraLinkNative/Design
-      - path: AuraLinkNative/Models
       - path: AuraLinkNative/Views
     resources:
       - path: AuraLinkNative/Resources
-    dependencies:
-      - package: Supabase
-        product: Supabase
     info:
       path: AuraLinkNative/Info.plist
       properties:
@@ -53,6 +45,10 @@ targets:
         NSPhotoLibraryUsageDescription: Selecione imagens para conversar e criar com a Aura.
         NSCameraUsageDescription: Use a câmera para anexar referências aos chats.
         NSMicrophoneUsageDescription: Converse com a Aura usando sua voz.
+        NSSpeechRecognitionUsageDescription: Transforme sua voz em texto nas conversas com a Aura.
+        NSPhotoLibraryAddUsageDescription: Salve imagens e arquivos criados pela Aura no seu iPhone.
+        UIBackgroundModes:
+          - audio
         ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
           - CFBundleURLName: com.auralink.app

@@ -1,18 +1,27 @@
 import SwiftUI
+import AVFoundation
 
 @main
 struct AuraLinkNativeApp: App {
-    @State private var session = SessionStore()
+    init() {
+        AudioSessionCoordinator.prepareForAuraVoice()
+    }
 
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environment(session)
-                .task { await session.restore() }
-                .onOpenURL { url in
-                    Task { await session.handle(url: url) }
-                }
+                .tint(AuraTheme.electricBlue)
         }
     }
 }
 
+private enum AudioSessionCoordinator {
+    static func prepareForAuraVoice() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(
+            .playAndRecord,
+            mode: .voiceChat,
+            options: [.defaultToSpeaker, .allowBluetoothHFP]
+        )
+    }
+}

@@ -2,9 +2,12 @@ import Testing
 @testable import AuraLinkNative
 
 struct AuraLinkNativeTests {
-    @Test func demoContentHasCoreDestinations() {
-        #expect(DemoData.conversations.count >= 3)
-        #expect(DemoData.experts.contains(where: { $0.isActive }))
+    @Test func productionAppUsesSecureAuraLinkEndpoint() {
+        #expect(AppEnvironment.productionURL.scheme == "https")
+        #expect(AppEnvironment.productionURL.host == "www.auralinkai.com.br")
+    }
+
+    @Test func nativeShellIdentifiesItsBuildToTheWebApp() {
+        #expect(AppEnvironment.nativeUserAgentSuffix.contains("AuraLinkNative"))
     }
 }
-
