@@ -53,7 +53,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: br.com.auralinkai.ios
-        PRODUCT_NAME: AuraLink
         INFOPLIST_FILE: AuraLinkNative/Info.plist
         GENERATE_INFOPLIST_FILE: false
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
