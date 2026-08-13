@@ -63,7 +63,7 @@ jobs:
           P12_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASS }}
           PROVISION_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
           ASC_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
