@@ -32,6 +32,7 @@ private func loadAuraNativeLogo() -> UIImage? {
 
 private struct AuraNativeLeadingControls: View {
     @ObservedObject var state: AuraNativeGlassState
+    @Namespace private var leadingGlass
 
     private var menuButton: some View {
         Button { state.perform("menu") } label: {
@@ -64,20 +65,22 @@ private struct AuraNativeLeadingControls: View {
 
     @available(iOS 26.0, *)
     private var liquidGlassControls: some View {
-        GlassEffectContainer(spacing: 6) {
-            HStack(spacing: 6) {
+        GlassEffectContainer(spacing: 0) {
+            HStack(spacing: 0) {
                 menuButton
                     .buttonStyle(.glass)
                     .buttonBorderShape(.circle)
+                    .glassEffectUnion(id: "aura-leading-controls", namespace: leadingGlass)
                 modelButton
                     .buttonStyle(.glass)
                     .buttonBorderShape(.circle)
+                    .glassEffectUnion(id: "aura-leading-controls", namespace: leadingGlass)
             }
         }
     }
 
     private var compatibilityControls: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 0) {
             menuButton
                 .buttonStyle(.plain)
                 .background(.ultraThinMaterial, in: Circle())
@@ -94,6 +97,92 @@ private struct AuraNativeLeadingControls: View {
         } else {
             compatibilityControls
         }
+    }
+}
+
+private struct AuraNativeSidebarTopControls: View {
+    @ObservedObject var state: AuraNativeGlassState
+
+    private func circleButton(_ action: String, systemName: String, label: String) -> some View {
+        Button { state.perform(action) } label: {
+            Image(systemName: systemName)
+                .font(.system(size: 18, weight: .medium))
+                .frame(width: 46, height: 46)
+        }
+        .foregroundStyle(state.isDark ? Color.white : Color.black)
+        .accessibilityLabel(label)
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
+            if #available(iOS 26.0, *) {
+                circleButton("sidebarSearch", systemName: "magnifyingglass", label: "Pesquisar chats")
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+                circleButton("sidebarNewChat", systemName: "plus", label: "Novo chat")
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+            } else {
+                circleButton("sidebarSearch", systemName: "magnifyingglass", label: "Pesquisar chats")
+                    .buttonStyle(.plain)
+                    .background(.ultraThinMaterial, in: Circle())
+                circleButton("sidebarNewChat", systemName: "plus", label: "Novo chat")
+                    .buttonStyle(.plain)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+        }
+        .padding(.horizontal, 14)
+    }
+}
+
+private struct AuraNativeSidebarBottomControls: View {
+    @ObservedObject var state: AuraNativeGlassState
+
+    private var chatButton: some View {
+        Button { state.perform("sidebarNewChat") } label: {
+            HStack(spacing: 9) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 16, weight: .medium))
+                Text("Chat")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .frame(width: 136, height: 48)
+        }
+        .foregroundStyle(state.isDark ? Color.white : Color.black)
+        .accessibilityLabel("Novo chat")
+    }
+
+    private var settingsButton: some View {
+        Button { state.perform("sidebarSettings") } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 18, weight: .medium))
+                .frame(width: 46, height: 46)
+        }
+        .foregroundStyle(state.isDark ? Color.white : Color.black)
+        .accessibilityLabel("Configurações")
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if #available(iOS 26.0, *) {
+                chatButton
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.capsule)
+                settingsButton
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+            } else {
+                chatButton
+                    .buttonStyle(.plain)
+                    .background(.ultraThinMaterial, in: Capsule())
+                settingsButton
+                    .buttonStyle(.plain)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
     }
 }
 
@@ -250,6 +339,9 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     private let nativeGlassState = AuraNativeGlassState()
     private var nativeLeadingHost: UIHostingController<AuraNativeLeadingControls>?
     private var nativeNewChatHost: UIHostingController<AuraNativeNewChatControl>?
+    private var nativeSidebarTopHost: UIHostingController<AuraNativeSidebarTopControls>?
+    private var nativeSidebarBottomHost: UIHostingController<AuraNativeSidebarBottomControls>?
+    private var nativeSidebarWidthConstraint: NSLayoutConstraint?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -316,7 +408,8 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                       const label = modelButton?.getAttribute('aria-label') || 'Aura Link';
                       const model = label.replace(/^Selecionar modelo\\. Atual:\\s*/i, '') || 'Aura Link';
                       root.classList.toggle('native-swiftui-glass-active', top);
-                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, model });
+                      root.classList.toggle('native-swiftui-sidebar-active', sidebarOpen && !dialogOpen);
+                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, sidebar: sidebarOpen && !dialogOpen, model });
                     }, 40);
                   };
                   const observer = new MutationObserver(publish);
@@ -353,9 +446,12 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
            let payload = message.body as? [String: Any],
            payload["type"] as? String == "state" {
             let top = payload["top"] as? Bool ?? false
+            let sidebar = payload["sidebar"] as? Bool ?? false
             nativeGlassState.modelName = payload["model"] as? String ?? "Aura Link"
             nativeLeadingHost?.view.isHidden = !top
             nativeNewChatHost?.view.isHidden = !top
+            nativeSidebarTopHost?.view.isHidden = !sidebar
+            nativeSidebarBottomHost?.view.isHidden = !sidebar
             return
         }
 
@@ -393,8 +489,10 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
 
         let leading = UIHostingController(rootView: AuraNativeLeadingControls(state: nativeGlassState))
         let newChat = UIHostingController(rootView: AuraNativeNewChatControl(state: nativeGlassState))
+        let sidebarTop = UIHostingController(rootView: AuraNativeSidebarTopControls(state: nativeGlassState))
+        let sidebarBottom = UIHostingController(rootView: AuraNativeSidebarBottomControls(state: nativeGlassState))
 
-        [leading, newChat].forEach { host in
+        [leading, newChat, sidebarTop, sidebarBottom].forEach { host in
             host.view.backgroundColor = .clear
             host.view.translatesAutoresizingMaskIntoConstraints = false
             host.view.isHidden = true
@@ -403,6 +501,8 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
             host.didMove(toParent: self)
         }
 
+        let sidebarWidth = sidebarTop.view.widthAnchor.constraint(equalToConstant: min(view.bounds.width * 0.76, 340))
+        nativeSidebarWidthConstraint = sidebarWidth
         NSLayoutConstraint.activate([
             leading.view.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
             leading.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
@@ -412,11 +512,28 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
             newChat.view.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
             newChat.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             newChat.view.widthAnchor.constraint(equalToConstant: 52),
-            newChat.view.heightAnchor.constraint(equalToConstant: 52)
+            newChat.view.heightAnchor.constraint(equalToConstant: 52),
+
+            sidebarTop.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            sidebarTop.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 6),
+            sidebarTop.view.heightAnchor.constraint(equalToConstant: 58),
+            sidebarWidth,
+
+            sidebarBottom.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            sidebarBottom.view.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -6),
+            sidebarBottom.view.widthAnchor.constraint(equalTo: sidebarTop.view.widthAnchor),
+            sidebarBottom.view.heightAnchor.constraint(equalToConstant: 60)
         ])
 
         nativeLeadingHost = leading
         nativeNewChatHost = newChat
+        nativeSidebarTopHost = sidebarTop
+        nativeSidebarBottomHost = sidebarBottom
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        nativeSidebarWidthConstraint?.constant = min(view.bounds.width * 0.76, 340)
     }
 
     private func performNativeUIAction(_ action: String, text: String?) {
@@ -436,6 +553,12 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
             script = "document.querySelector('form input[type=\"file\"][multiple]')?.click();"
         case "voice":
             script = "document.querySelector('[aria-label=\"Aura Voice\"]')?.click();"
+        case "sidebarSearch":
+            script = "document.querySelector('.mobile-sidebar-top-action[aria-label*=\"Pesquisar\"],.mobile-sidebar-top-action[aria-label*=\"Search\"]')?.click();"
+        case "sidebarNewChat":
+            script = "(() => { const primary=document.querySelector('.mobile-sidebar-new-chat'); if (primary) primary.click(); else document.querySelector('.mobile-sidebar-top-action[aria-label*=\"Novo\"]')?.click(); })();"
+        case "sidebarSettings":
+            script = "document.querySelector('.mobile-sidebar-settings')?.click();"
         case "micDown":
             script = "(() => { const e=document.querySelector('.chat-voice-button'); e?.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerType:'touch',pointerId:91})); })();"
         case "micUp":
