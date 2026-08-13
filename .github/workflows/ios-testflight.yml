@@ -119,6 +119,8 @@ jobs:
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           /usr/libexec/PlistBuddy -c "Set :signingStyle manual" ExportOptions.plist
           /usr/libexec/PlistBuddy -c "Set :teamID $TEAM_ID" ExportOptions.plist
@@ -129,6 +131,6 @@ jobs:
             -exportPath $RUNNER_TEMP/export \
             -exportOptionsPlist ExportOptions.plist \
             -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8 \
-            -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8 \
+            -authenticationKeyID "$API_KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID"
