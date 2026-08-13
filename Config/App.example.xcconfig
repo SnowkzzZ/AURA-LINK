@@ -1,0 +1,4 @@
+// Copy this file to App.xcconfig for local builds. Never commit service-role keys.
+SUPABASE_URL = https://YOUR_PROJECT.supabase.co
+SUPABASE_PUBLISHABLE_KEY = YOUR_PUBLISHABLE_KEY
+

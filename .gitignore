@@ -1,0 +1,7 @@
+AuraLinkNative.xcodeproj/
+.build/
+DerivedData/
+Config/App.xcconfig
+*.xcarchive
+*.ipa
+
