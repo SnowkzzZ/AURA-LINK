@@ -392,13 +392,12 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                     clearTimeout(timer);
                     timer = setTimeout(() => {
                       const root = document.documentElement;
-                      const drawer = document.querySelector('.mobile-drawer-main');
                       const drawerRoot = document.querySelector('.mobile-drawer-root');
-                      const drawerProgress = Number.parseFloat(
-                        getComputedStyle(drawerRoot || document.documentElement)
-                          .getPropertyValue('--mobile-drawer-progress') || '0'
-                      );
-                      const sidebarOpen = !!drawer?.classList.contains('is-partitioned') || drawerProgress > 2;
+                      const drawerRatio = Math.min(1, Math.max(0, Number.parseFloat(
+                        drawerRoot?.getAttribute('data-drawer-ratio') || '0'
+                      ) || 0));
+                      const chatControlsVisible = drawerRatio < 0.08;
+                      const sidebarControlsVisible = drawerRatio >= 0.58;
                       const dialogOpen = !!document.querySelector('[role="dialog"][data-state="open"]');
                       const hasHeader = !!document.querySelector('.mobile-header-shell');
                       const form = document.querySelector('form');
@@ -406,17 +405,17 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                       const hasComposer = !!document.querySelector('.input-glow');
                       const hasAttachments = !!form?.querySelector('button[aria-label^="Remover "]');
                       const isStudio = !!document.querySelector('.aura-studio-shell, .aura-studio-active-shell');
-                      const top = hasHeader && !sidebarOpen && !dialogOpen;
+                      const top = hasHeader && chatControlsVisible && !dialogOpen;
                       const modelButton = document.querySelector('.mobile-header-model-button button');
                       const label = modelButton?.getAttribute('aria-label') || 'Aura Link';
                       const model = label.replace(/^Selecionar modelo\\. Atual:\\s*/i, '') || 'Aura Link';
                       root.classList.toggle('native-swiftui-glass-active', top);
-                      root.classList.toggle('native-swiftui-sidebar-active', sidebarOpen && !dialogOpen);
-                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, sidebar: sidebarOpen && !dialogOpen, model });
+                      root.classList.toggle('native-swiftui-sidebar-active', sidebarControlsVisible && !dialogOpen);
+                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, sidebar: sidebarControlsVisible && !dialogOpen, model });
                     }, 40);
                   };
                   const observer = new MutationObserver(publish);
-                  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-state', 'aria-label', 'disabled'] });
+                  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-state', 'aria-label', 'disabled', 'data-drawer-ratio'] });
                   ['pushState', 'replaceState'].forEach((name) => {
                     const original = history[name];
                     history[name] = function(...args) { const result = original.apply(this, args); publish(); return result; };
