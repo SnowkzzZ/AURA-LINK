@@ -106,8 +106,23 @@ jobs:
           APP_PATH="$RUNNER_TEMP/AuraLink.xcarchive/Products/Applications/AuraLinkNative.app"
           APP_INFO="$APP_PATH/Info.plist"
           ICON_SOURCE="AuraLinkNative/Resources/Assets.xcassets/AppIcon.appiconset"
+          ASSET_CATALOG="AuraLinkNative/Resources/Assets.xcassets"
+
+          # Compile the catalog explicitly into Assets.car for App Store validation.
+          xcrun actool "$ASSET_CATALOG" \
+            --compile "$APP_PATH" \
+            --platform iphoneos \
+            --minimum-deployment-target 26.0 \
+            --target-device iphone \
+            --app-icon AppIcon \
+            --output-partial-info-plist "$RUNNER_TEMP/AppIconInfo.plist" \
+            --compress-pngs \
+            --enable-on-demand-resources NO
+          /usr/libexec/PlistBuddy -c "Merge $RUNNER_TEMP/AppIconInfo.plist" "$APP_INFO"
+
           cp "$ICON_SOURCE/AppIcon-60@2x.png" "$APP_PATH/AppIcon60x60@2x.png"
           cp "$ICON_SOURCE/AppIcon-60@3x.png" "$APP_PATH/AppIcon60x60@3x.png"
+          cp "$ICON_SOURCE/AppIcon.png" "$APP_PATH/AppIcon.png"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIconName AppIcon" "$APP_INFO"
           /usr/libexec/PlistBuddy -c "Delete :CFBundleIcons" "$APP_INFO" || true
           /usr/libexec/PlistBuddy -c "Add :CFBundleIcons dict" "$APP_INFO"
