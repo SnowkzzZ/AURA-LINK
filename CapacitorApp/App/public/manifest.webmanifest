@@ -1,0 +1,20 @@
+{
+  "name": "Aura Link",
+  "short_name": "Aura",
+  "description": "Seu assistente inteligente em qualquer dispositivo.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#040408",
+  "theme_color": "#040408",
+  "icons": [
+    {
+      "src": "/aura-logo-static.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

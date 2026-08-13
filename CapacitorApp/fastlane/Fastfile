@@ -1,0 +1,97 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and upload Aura Link AI to TestFlight"
+  lane :deploy do
+    require "base64"
+    require "tempfile"
+
+    bundle_id = "com.auralink.app"
+    team_id = ENV.fetch("APPLE_TEAM_ID", "ML5W9R5552")
+    profile_name = ENV.fetch("APPLE_PROVISIONING_PROFILE_NAME", "AuraLink_AppStoreProfile")
+    keychain_name = "auralink-testflight-#{ENV.fetch('GITHUB_RUN_ID', Time.now.to_i.to_s)}"
+    keychain_password = ENV.fetch("KEYCHAIN_PASSWORD")
+
+    create_keychain(
+      name: keychain_name,
+      password: keychain_password,
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600,
+      lock_when_sleeps: false
+    )
+
+    begin
+      p12_file = Tempfile.new(["auralink-distribution", ".p12"])
+      p12_file.binmode
+      p12_file.write(Base64.strict_decode64(ENV.fetch("APPLE_CERTIFICATE_P12")))
+      p12_file.flush
+
+      import_certificate(
+        keychain_name: keychain_name,
+        keychain_password: keychain_password,
+        certificate_path: p12_file.path,
+        certificate_password: ENV.fetch("APPLE_CERTIFICATE_PASS", "")
+      )
+
+      profile_file = Tempfile.new(["auralink-profile", ".mobileprovision"])
+      profile_file.binmode
+      profile_file.write(Base64.strict_decode64(ENV.fetch("APPLE_PROVISIONING_PROFILE")))
+      profile_file.flush
+      install_provisioning_profile(path: profile_file.path)
+
+      api_key = app_store_connect_api_key(
+        key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+        issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+        key_content: ENV.fetch("APP_STORE_CONNECT_API_KEY").strip,
+        is_key_content_base64: true
+      )
+
+      latest_build = latest_testflight_build_number(
+        api_key: api_key,
+        app_identifier: bundle_id,
+        version: "1.0",
+        initial_build_number: 116
+      )
+      next_build = latest_build.to_i + 1
+
+      increment_build_number(
+        build_number: next_build,
+        xcodeproj: "App.xcodeproj"
+      )
+
+      build_app(
+        project: "App.xcodeproj",
+        scheme: "App",
+        clean: true,
+        export_method: "app-store",
+        output_directory: "output",
+        output_name: "AuraLinkAI.ipa",
+        xcargs: [
+          "CODE_SIGN_STYLE=Manual",
+          "CODE_SIGN_IDENTITY=Apple\\ Distribution",
+          "DEVELOPMENT_TEAM=#{team_id}",
+          "PROVISIONING_PROFILE_SPECIFIER=#{profile_name}"
+        ].join(" "),
+        export_options: {
+          method: "app-store",
+          signingStyle: "manual",
+          teamID: team_id,
+          provisioningProfiles: {
+            bundle_id => profile_name
+          }
+        }
+      )
+
+      upload_to_testflight(
+        api_key: api_key,
+        ipa: "output/AuraLinkAI.ipa",
+        changelog: "Experiência mobile responsiva, navegação por gesto, configurações otimizadas e correções de interação no iPhone e iPad.",
+        distribute_external: false,
+        skip_waiting_for_build_processing: false
+      )
+    ensure
+      delete_keychain(name: keychain_name)
+    end
+  end
+end

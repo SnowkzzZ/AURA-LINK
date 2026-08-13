@@ -1,0 +1,25 @@
+{
+	"appId": "com.auralink.app",
+	"appName": "Aura Link",
+	"webDir": "dist",
+	"server": {
+		"iosScheme": "https"
+	},
+	"ios": {
+		"preferredContentMode": "mobile",
+		"backgroundColor": "#050509",
+		"contentInset": "always"
+	},
+	"plugins": {
+		"Keyboard": {
+			"resize": "native",
+			"style": "DEFAULT",
+			"resizeOnFullScreen": true
+		}
+	},
+	"packageClassList": [
+		"AppPlugin",
+		"CAPBrowserPlugin",
+		"KeyboardPlugin"
+	]
+}
