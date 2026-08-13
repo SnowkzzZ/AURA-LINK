@@ -230,7 +230,7 @@ private struct AuraNativeComposer: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .bottom)
-        .auraSystemGlass(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
         .animation(.spring(response: 0.28, dampingFraction: 0.82), value: text.isEmpty)
         .animation(.easeOut(duration: 0.2), value: state.isDark)
     }
