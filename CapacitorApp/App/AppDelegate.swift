@@ -333,6 +333,7 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     private var nativeSidebarTopHost: UIHostingController<AuraNativeSidebarTopControls>?
     private var nativeSidebarBottomHost: UIHostingController<AuraNativeSidebarBottomControls>?
     private var nativeSidebarWidthConstraint: NSLayoutConstraint?
+    private var nativeSidebarRevealRatio: CGFloat = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -381,10 +382,10 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                 (() => {
                   if (window.__auraNativeUIInstalled) return;
                   window.__auraNativeUIInstalled = true;
-                  let timer = 0;
+                  let frame = 0;
                   const publish = () => {
-                    clearTimeout(timer);
-                    timer = setTimeout(() => {
+                    cancelAnimationFrame(frame);
+                    frame = requestAnimationFrame(() => {
                       const root = document.documentElement;
                       const drawerRoot = document.querySelector('.mobile-drawer-root');
                       const drawerRatio = Math.min(1, Math.max(0, Number.parseFloat(
@@ -392,7 +393,6 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                       ) || 0));
                       const drawerOpen = drawerRoot?.getAttribute('data-drawer-open') === 'true';
                       const drawerDragging = drawerRoot?.getAttribute('data-drawer-dragging') === 'true';
-                      const sidebarControlsVisible = drawerOpen && !drawerDragging && drawerRatio >= 0.995;
                       const dialogOpen = !!document.querySelector('[role="dialog"][data-state="open"]');
                       const hasHeader = !!document.querySelector('.mobile-header-shell');
                       const form = document.querySelector('form');
@@ -405,9 +405,14 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                       const label = modelButton?.getAttribute('aria-label') || 'Aura Link';
                       const model = label.replace(/^Selecionar modelo\\. Atual:\\s*/i, '') || 'Aura Link';
                       root.classList.toggle('native-swiftui-glass-active', top);
-                      root.classList.toggle('native-swiftui-sidebar-active', sidebarControlsVisible && !dialogOpen);
-                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, sidebar: sidebarControlsVisible && !dialogOpen, model });
-                    }, 40);
+                      root.classList.toggle('native-swiftui-sidebar-active', drawerRatio > 0 && !dialogOpen);
+                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({
+                        type: 'state',
+                        top,
+                        sidebarRatio: dialogOpen ? 0 : drawerRatio,
+                        model
+                      });
+                    });
                   };
                   const observer = new MutationObserver(publish);
                   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-state', 'aria-label', 'disabled', 'data-drawer-ratio', 'data-drawer-open', 'data-drawer-dragging'] });
@@ -443,13 +448,11 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
            let payload = message.body as? [String: Any],
            payload["type"] as? String == "state" {
             let top = payload["top"] as? Bool ?? false
+            let sidebarRatio = CGFloat((payload["sidebarRatio"] as? NSNumber)?.doubleValue ?? 0)
             nativeGlassState.modelName = payload["model"] as? String ?? "Aura Link"
             nativeLeadingHost?.view.isHidden = !top
             nativeNewChatHost?.view.isHidden = !top
-            // The sidebar is one continuous web panel so its header, content
-            // and footer stay attached to the drawer throughout the gesture.
-            nativeSidebarTopHost?.view.isHidden = true
-            nativeSidebarBottomHost?.view.isHidden = true
+            updateNativeSidebarReveal(sidebarRatio)
             return
         }
 
@@ -532,6 +535,32 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         nativeSidebarWidthConstraint?.constant = min(view.bounds.width * 0.76, 340)
+        updateNativeSidebarReveal(nativeSidebarRevealRatio)
+    }
+
+    private func updateNativeSidebarReveal(_ ratio: CGFloat) {
+        let clampedRatio = min(max(ratio, 0), 1)
+        nativeSidebarRevealRatio = clampedRatio
+        let isVisible = clampedRatio > 0.015
+        let revealWidth = min(view.bounds.width * 0.76, 340) * clampedRatio
+
+        for hostView in [nativeSidebarTopHost?.view, nativeSidebarBottomHost?.view].compactMap({ $0 }) {
+            hostView.isHidden = !isVisible
+            guard isVisible else {
+                hostView.layer.mask = nil
+                continue
+            }
+
+            let mask = hostView.layer.mask ?? CALayer()
+            mask.backgroundColor = UIColor.black.cgColor
+            mask.frame = CGRect(
+                x: 0,
+                y: 0,
+                width: revealWidth,
+                height: max(hostView.bounds.height, 60)
+            )
+            hostView.layer.mask = mask
+        }
     }
 
     private func performNativeUIAction(_ action: String, text: String?) {
