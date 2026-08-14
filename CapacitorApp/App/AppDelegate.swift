@@ -443,12 +443,13 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
            let payload = message.body as? [String: Any],
            payload["type"] as? String == "state" {
             let top = payload["top"] as? Bool ?? false
-            let sidebar = payload["sidebar"] as? Bool ?? false
             nativeGlassState.modelName = payload["model"] as? String ?? "Aura Link"
             nativeLeadingHost?.view.isHidden = !top
             nativeNewChatHost?.view.isHidden = !top
-            nativeSidebarTopHost?.view.isHidden = !sidebar
-            nativeSidebarBottomHost?.view.isHidden = !sidebar
+            // The sidebar is one continuous web panel so its header, content
+            // and footer stay attached to the drawer throughout the gesture.
+            nativeSidebarTopHost?.view.isHidden = true
+            nativeSidebarBottomHost?.view.isHidden = true
             return
         }
 
