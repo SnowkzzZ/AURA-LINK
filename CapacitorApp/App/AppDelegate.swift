@@ -339,7 +339,6 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     private var nativeSidebarTopHost: UIHostingController<AuraNativeSidebarTopControls>?
     private var nativeSidebarBottomHost: UIHostingController<AuraNativeSidebarBottomControls>?
     private var nativeSidebarWidthConstraint: NSLayoutConstraint?
-    private var nativeDrawerRatio: CGFloat = 0
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -407,13 +406,13 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
                       const hasComposer = !!document.querySelector('.input-glow');
                       const hasAttachments = !!form?.querySelector('button[aria-label^="Remover "]');
                       const isStudio = !!document.querySelector('.aura-studio-shell, .aura-studio-active-shell');
-                      const top = hasHeader && !drawerOpen && !dialogOpen;
+                      const top = hasHeader && !drawerOpen && !drawerDragging && drawerRatio <= 0.005 && !dialogOpen;
                       const modelButton = document.querySelector('.mobile-header-model-button button');
                       const label = modelButton?.getAttribute('aria-label') || 'Aura Link';
                       const model = label.replace(/^Selecionar modelo\\. Atual:\\s*/i, '') || 'Aura Link';
                       root.classList.toggle('native-swiftui-glass-active', top);
                       root.classList.toggle('native-swiftui-sidebar-active', sidebarControlsVisible && !dialogOpen);
-                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, sidebar: sidebarControlsVisible && !dialogOpen, model, drawerRatio });
+                      window.webkit?.messageHandlers?.auraNativeUI?.postMessage({ type: 'state', top, sidebar: sidebarControlsVisible && !dialogOpen, model });
                     }, 40);
                   };
                   const observer = new MutationObserver(publish);
@@ -451,10 +450,7 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
            payload["type"] as? String == "state" {
             let top = payload["top"] as? Bool ?? false
             let sidebar = payload["sidebar"] as? Bool ?? false
-            let ratioNumber = payload["drawerRatio"] as? NSNumber ?? NSNumber(value: 0)
-            nativeDrawerRatio = min(1, max(0, CGFloat(truncating: ratioNumber)))
             nativeGlassState.modelName = payload["model"] as? String ?? "Aura Link"
-            updateNativeDrawerTransform()
             nativeLeadingHost?.view.isHidden = !top
             nativeNewChatHost?.view.isHidden = !top
             nativeSidebarTopHost?.view.isHidden = !sidebar
@@ -541,14 +537,6 @@ final class AuraBridgeViewController: CAPBridgeViewController, WKScriptMessageHa
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         nativeSidebarWidthConstraint?.constant = min(view.bounds.width * 0.76, 340)
-        updateNativeDrawerTransform()
-    }
-
-    private func updateNativeDrawerTransform() {
-        let drawerOffset = min(view.bounds.width * 0.76, 340) * nativeDrawerRatio
-        let transform = CGAffineTransform(translationX: drawerOffset, y: 0)
-        nativeLeadingHost?.view.transform = transform
-        nativeNewChatHost?.view.transform = transform
     }
 
     private func performNativeUIAction(_ action: String, text: String?) {
