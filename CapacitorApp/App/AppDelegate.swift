@@ -117,14 +117,8 @@ private struct AuraNativeSidebarTopControls: View {
                 circleButton("sidebarSearch", systemName: "magnifyingglass", label: "Pesquisar chats")
                     .buttonStyle(.glass)
                     .buttonBorderShape(.circle)
-                circleButton("sidebarNewChat", systemName: "plus", label: "Novo chat")
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
             } else {
                 circleButton("sidebarSearch", systemName: "magnifyingglass", label: "Pesquisar chats")
-                    .buttonStyle(.plain)
-                    .background(.ultraThinMaterial, in: Circle())
-                circleButton("sidebarNewChat", systemName: "plus", label: "Novo chat")
                     .buttonStyle(.plain)
                     .background(.ultraThinMaterial, in: Circle())
             }
